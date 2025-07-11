@@ -1,52 +1,31 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
-
-type App struct {
-	Database *sql.DB
-}
-
-// album represents data about a record album.
-type album struct {
-	ID     string  `json:"id"`
-	Title  string  `json:"title"`
-	Artist string  `json:"artist"`
-	Price  float64 `json:"price"`
-}
 
 type crawlPayload struct {
 	Url string `json:"url"`
 }
 
-// albums slice to seed record album data.
-var albums = []album{
-	{ID: "1", Title: "Blue Train", Artist: "John Coltrane", Price: 4.99},
-	{ID: "2", Title: "Jeru", Artist: "Gerry Mulligan", Price: 17.99},
-	{ID: "3", Title: "Sarah Vaughan and Clifford Brown", Artist: "Sarah Vaughan", Price: 39.99},
-}
-
-// getAlbums responds with the list of all albums as JSON.
-func getAlbums(c *gin.Context) {
-	c.IndentedJSON(http.StatusOK, albums)
+type crawlData struct {
+	ID   int          `json:"id"`
+	Data ScrapeResult `json:"data"`
+	Url  string       `json:"url"`
 }
 
 func startCrawling(c *gin.Context) {
 	var payload crawlPayload
 
-	// Call BindJSON to bind the received JSON to
-	// newAlbum.
 	if err := c.BindJSON(&payload); err != nil {
 		return
 	}
-	// debugg
-	// Add the new album to the slice.
 
 	go func() {
 		crawData := crawl(payload.Url)
@@ -66,17 +45,70 @@ func startCrawling(c *gin.Context) {
 			log.Fatal("Database INSERT failed")
 		}
 	}()
-
-	// c.IndentedJSON(http.StatusCreated, newAlbum)
 	c.Status(http.StatusOK)
 }
+
+func getCurrentCrawlData(c *gin.Context) {
+	pageStr := c.Query("page")
+
+	if pageStr == "" {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	fmt.Println("pageStr result:", pageStr)
+
+	page, err := strconv.Atoi(pageStr)
+	if err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	fmt.Println("page result:", page)
+
+	rows, err := DB.Query(
+		"Select id, data, url from crawl_data Where user_id=1 LIMIt ? OFFSET ?",
+		10,
+		(page-1)*10,
+	)
+	if err != nil {
+		log.Fatal("Query execution error ?", err)
+		c.AbortWithStatus(http.StatusBadRequest)
+	}
+
+	defer rows.Close()
+
+	jsonCrawlData := []crawlData{}
+	for rows.Next() {
+		var d crawlData
+		var dataBytes []byte
+		if err := rows.Scan(&d.ID, &dataBytes, &d.Url); err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		json.Unmarshal(dataBytes, &d.Data)
+		jsonCrawlData = append(jsonCrawlData, d)
+	}
+
+	c.JSON(http.StatusOK, jsonCrawlData)
+}
+
+// Todo
+// 1. Return error codes and add logs
+// 2. Move DB operations to a different file
+// 3. Add support for deleting a crawl, abort it
+// 4. Add support for FE filter and pass those filters in BE and accordingly send data from crawl-data api only 10 as per page
+// 5. Add CORS configuration
+// 6. Add status response in crawl-data - queued -> running -> done/error
 
 func main() {
 	CreateDatabase()
 
 	router := gin.Default()
-	router.GET("/albums", getAlbums)
 
 	router.POST("/url/crawl", startCrawling)
+	// router.POST("/url/crawl", startCrawling)
+	router.GET("/url/crawl-data", getCurrentCrawlData)
+
 	router.Run("localhost:8080")
 }

@@ -116,6 +116,7 @@ func crawl(currenturl string) Response {
 	c.Visit(currenturl)
 
 	checker.Wait()
+	c.Wait()
 
 	internalLinksSlice := make([]string, 0, len(internalLinks))
 	for link := range internalLinks {
