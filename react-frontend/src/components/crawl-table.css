@@ -1,0 +1,57 @@
+.crawl-table-container {
+    text-align: left;
+    margin-top: 10px;
+    overflow-x: auto;
+}
+
+.crawl-table {
+    border-collapse: separate; /* default, enables spacing */
+    border-spacing: 10px 5px;
+    width: 100%;
+}
+
+.crawl-table-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.table-header-btn {
+    background-color: #D6E6F2;
+    border-radius: 4px;
+    appearance: none;
+    border: 0;
+    color: rgb(0, 105, 40);
+    padding: 10px
+}
+
+.tr-url-data {
+    text-align: left;
+    align-items: normal;
+    vertical-align: top;
+    height: 30px;
+}
+
+.tr-url-data td {
+    max-width: 100px;
+    word-break: break-all;
+}
+
+.cell-content {
+    overflow: auto;
+    height: 100px;
+}
+
+.table-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.arrow-btn {
+    background-color: #D6E6F2;
+    border: 0;
+    border-radius: 4px;
+    padding: 10px;
+    cursor: pointer;
+}
