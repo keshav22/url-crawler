@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -64,7 +63,7 @@ func startCrawling(c *gin.Context) {
 
 		jsonBytes, err := json.Marshal(crawData.Data)
 		if err != nil {
-			log.Fatal("JSON marshal failed:", err)
+			log.Println("JSON marshal failed:", err)
 		}
 
 		_, err = DB.Exec(
@@ -74,7 +73,7 @@ func startCrawling(c *gin.Context) {
 		)
 
 		if err != nil {
-			log.Fatal("Database update failed")
+			log.Println("Database update failed")
 		}
 	}()
 	c.Status(http.StatusOK)
@@ -88,15 +87,11 @@ func getCurrentCrawlData(c *gin.Context) {
 		return
 	}
 
-	fmt.Println("pageStr result:", pageStr)
-
 	page, err := strconv.Atoi(pageStr)
 	if err != nil || page < 1 {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-
-	fmt.Println("page result:", page)
 
 	var totalCount int
 	DB.QueryRow("SELECT COUNT(id) FROM crawl_data").Scan(&totalCount)
@@ -108,7 +103,7 @@ func getCurrentCrawlData(c *gin.Context) {
 	)
 
 	if err != nil {
-		log.Fatal("Query execution error ?", err)
+		log.Println("Query execution error ?", err)
 		c.AbortWithStatus(http.StatusBadRequest)
 	}
 
@@ -193,7 +188,7 @@ func reStartCrawling(c *gin.Context) {
 
 		jsonBytes, err := json.Marshal(crawData.Data)
 		if err != nil {
-			log.Fatal("JSON marshal failed:", err)
+			log.Println("JSON marshal failed:", err)
 		}
 
 		_, err = DB.Exec(
@@ -203,7 +198,7 @@ func reStartCrawling(c *gin.Context) {
 		)
 
 		if err != nil {
-			log.Fatal("Database update failed")
+			log.Println("Database update failed")
 		}
 	}()
 

@@ -31,7 +31,7 @@ type Response struct {
 func crawl(currenturl string, id int64) Response {
 	base, err := url.Parse(currenturl)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -134,6 +134,8 @@ func crawl(currenturl string, id int64) Response {
 	checker.Wait()
 	c.Wait()
 
+	cleanUpCrawlId(id)
+
 	internalLinksSlice := make([]string, 0, len(internalLinks))
 	for link := range internalLinks {
 		internalLinksSlice = append(internalLinksSlice, link)
@@ -159,8 +161,6 @@ func crawl(currenturl string, id int64) Response {
 		LoginFormFound:    loginFormFound,
 	}
 
-	cleanUpCrawlId(id)
-
 	response := Response{Data: result}
 	return response
 }
@@ -172,7 +172,7 @@ func cleanUpCrawlId(crawlId int64) {
 		cancel()
 		delete(crawlCancelMap, crawlId)
 	} else {
-		log.Fatal("Tried canceling already cancelled request ?", crawlId)
+		log.Println("Tried canceling already done/cancelled request ?", crawlId)
 	}
 	crawlCancelLock.Unlock()
 }
