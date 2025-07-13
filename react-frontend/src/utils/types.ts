@@ -10,6 +10,7 @@ export type crawlData = {
   };
   id: number;
   url: string;
+  status: string;
 };
 
 export type crawlDataResponse = {

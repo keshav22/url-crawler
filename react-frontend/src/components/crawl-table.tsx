@@ -6,20 +6,75 @@ type CrawlTableProps = {
   crawlUrlData: crawlData[];
   maxPageCount: number;
   onPageChange: (page: number) => void;
+  reFetchCrawlDatas: (page: number) => void;
 };
 
 function CrawlTable({
   crawlUrlData,
   maxPageCount,
   onPageChange,
+  reFetchCrawlDatas,
 }: CrawlTableProps) {
   const [showResult, setShowResults] = useState<boolean>(false);
   const [currentPagenumber, setCurrentPagenumber] = useState<number>(1);
 
+  const handleReAnalysis = (id: number) => {
+    fetch("http://localhost:8080/url/crawl/reStart", {
+      method: "post",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: id.toString(),
+    })
+      .then((response: Response) => {
+        if (!response.ok) {
+          if (response.status == 409) {
+            alert("Restart failed as similar crawl is running already");
+          } else throw new Error(`HTTP error! status: ${response.status}`);
+        }
+      })
+      .catch((err) => {
+        console.error("Fetch error:", err);
+      });
+  };
+
+  const handleStopAnalysis = (id: number) => {
+    fetch("http://localhost:8080/url/crawl/stop", {
+      method: "post",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: id.toString(),
+    })
+      .then((response: Response) => {
+        if (!response.ok) {
+          if (response.status == 409) {
+            alert("Job is stopped/finished already");
+          } else throw new Error(`HTTP error! status: ${response.status}`);
+        }
+      })
+      .catch((err) => {
+        console.error("Fetch error:", err);
+      });
+  };
+
   return (
     <div className="crawl-table-container">
       <div className="crawl-table-header">
-        <h3>URL Management</h3>
+        <div className="crawl-table-h-desc">
+          <h3>{showResult ? "Data View" : "URL Management"}</h3>
+          <button
+            className="action-btn refresh-table"
+            onClick={() => {
+              reFetchCrawlDatas(currentPagenumber);
+            }}
+          >
+            {" "}
+            <img src="/refresh_arrows.svg" width={20} height={20} />
+          </button>
+        </div>
         <div className="table-actions">
           <div>
             <button
@@ -56,7 +111,7 @@ function CrawlTable({
       </div>
       {showResult ? (
         <table className="crawl-table">
-          <thead>
+          <thead className="crawl-table-head">
             <tr>
               <th>ID</th>
               <th>url</th>
@@ -128,12 +183,12 @@ function CrawlTable({
         </table>
       ) : (
         <table className="crawl-table">
-          <thead>
+          <thead className="crawl-table-head">
             <tr>
               <th>ID</th>
               <th>Url</th>
               <th>Status</th>
-              <th>Action</th>
+              <th style={{textAlign: "center"}}>Action</th>
             </tr>
           </thead>
 
@@ -142,8 +197,30 @@ function CrawlTable({
               <tr key={index}>
                 <td>{crawl.id}</td>
                 <td>{crawl.url}</td>
-                <td>Running</td>
-                <td></td>
+                <td>{crawl.status}</td>
+                <td>
+                  <div className="action-btn-container">
+                    <button
+                      className="action-btn"
+                      onClick={() => {
+                        handleReAnalysis(crawl.id);
+                      }}
+                    >
+                      <img src="/refresh_arrows.svg" width={20} height={20} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleStopAnalysis(crawl.id);
+                      }}
+                      className="action-btn"
+                    >
+                      <img src="/stop_icon.svg" width={20} height={20} />
+                    </button>
+                    <button className="action-btn">
+                      <img src="/delete_trash.svg" width={20} height={20} />
+                    </button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>

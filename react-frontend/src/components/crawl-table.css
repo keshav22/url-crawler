@@ -55,3 +55,28 @@
     padding: 10px;
     cursor: pointer;
 }
+
+.action-btn-container {
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    justify-content: space-around;
+    padding-top: 8px
+}
+
+.action-btn {
+    background-color: transparent;
+    border: 0;
+    cursor: pointer;
+}
+
+.crawl-table-h-desc {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+    justify-content: center;
+}
+
+.refresh-table { 
+    padding-top: 7px;
+}
