@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -81,8 +82,12 @@ func startCrawling(c *gin.Context) {
 
 func getCurrentCrawlData(c *gin.Context) {
 	pageStr := c.Query("page")
+	srtColName := c.Query("srtColName")
+	order := c.Query("order")
+	// filColName := c.Query("filColName")
+	// filColValue := c.Query("filColName")
 
-	if pageStr == "" {
+	if pageStr == "" || (srtColName != "" && order == "") {
 		c.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -96,11 +101,49 @@ func getCurrentCrawlData(c *gin.Context) {
 	var totalCount int
 	DB.QueryRow("SELECT COUNT(id) FROM crawl_data").Scan(&totalCount)
 
-	rows, err := DB.Query(
-		"Select id, data, url from crawl_data Where user_id=1 LIMIt ? OFFSET ?",
-		10,
-		(page-1)*10,
-	)
+	var query string
+
+	switch srtColName {
+	case "id":
+		query = fmt.Sprintf(`
+					SELECT id, data, url
+					FROM crawl_data
+					WHERE user_id = 1
+					ORDER BY id %s
+					LIMIT %d OFFSET %d
+					`, order, 10, (page-1)*10,
+		)
+	case "url":
+		query = fmt.Sprintf(`
+					SELECT id, data, url
+					FROM crawl_data
+					WHERE user_id = 1
+					ORDER BY url %s
+					LIMIT %d OFFSET %d
+					`, order, 10, (page-1)*10,
+		)
+	default:
+		if srtColName == "" {
+			query = fmt.Sprintf(`
+						SELECT id, data, url
+						FROM crawl_data
+						WHERE user_id = 1
+						LIMIT %d OFFSET %d
+						`, 10, (page-1)*10,
+			)
+		} else {
+			query = fmt.Sprintf(`
+						SELECT id, data, url
+						FROM crawl_data
+						WHERE user_id = 1
+						ORDER BY JSON_UNQUOTE(JSON_EXTRACT(data, '$.%s')) %s
+						LIMIT %d OFFSET %d
+						`, srtColName, order, 10, (page-1)*10,
+			)
+		}
+	}
+
+	rows, err := DB.Query(query)
 
 	if err != nil {
 		log.Println("Query execution error ?", err)
