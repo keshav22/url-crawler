@@ -1,13 +1,18 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/gocolly/colly"
 )
+
+var crawlCancelMap = make(map[int64]context.CancelFunc)
+var crawlCancelLock sync.Mutex
 
 type ScrapeResult struct {
 	HTMLVersion       string         `json:"html_version"`
@@ -23,17 +28,25 @@ type Response struct {
 	Data ScrapeResult `json:"data"`
 }
 
-func crawl(currenturl string) Response {
+func crawl(currenturl string, id int64) Response {
 	base, err := url.Parse(currenturl)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+
+	crawlCancelLock.Lock()
+	crawlCancelMap[id] = cancel
+	crawlCancelLock.Unlock()
 
 	c := colly.NewCollector(
 		colly.MaxDepth(1),
 		colly.Async(true),
 	)
 
+	collyCtx := colly.NewContext()
+	collyCtx.Put("ctx", ctx)
 	var htmlVersion string
 	var pageTitle string
 	headingCounts := map[string]int{}
@@ -106,14 +119,17 @@ func crawl(currenturl string) Response {
 	c.OnScraped(func(r *colly.Response) {
 		fmt.Println("Checking accessibility of links, this might take a moment...")
 		for link := range internalLinks {
-			checker.Visit(link)
+			checker.Request("GET", link, nil, collyCtx, nil)
 		}
 		for link := range externalLinks {
-			checker.Visit(link)
+			checker.Request("GET", link, nil, collyCtx, nil)
 		}
 	})
 
-	c.Visit(currenturl)
+	c.Request("GET", currenturl, nil, collyCtx, nil)
+
+	//The below line is just for testing will be removed completely later
+	//time.Sleep(10 * time.Second)
 
 	checker.Wait()
 	c.Wait()
@@ -143,6 +159,31 @@ func crawl(currenturl string) Response {
 		LoginFormFound:    loginFormFound,
 	}
 
+	cleanUpCrawlId(id)
+
 	response := Response{Data: result}
 	return response
+}
+
+func cleanUpCrawlId(crawlId int64) {
+	crawlCancelLock.Lock()
+	cancel, ok := crawlCancelMap[crawlId]
+	if ok {
+		cancel()
+		delete(crawlCancelMap, crawlId)
+	} else {
+		log.Fatal("Tried canceling already cancelled request ?", crawlId)
+	}
+	crawlCancelLock.Unlock()
+}
+
+func checkCrawIdRunning(crawlId int64) bool {
+	crawlCancelLock.Lock()
+	_, ok := crawlCancelMap[crawlId]
+	if ok {
+		crawlCancelLock.Unlock()
+		return true
+	}
+	crawlCancelLock.Unlock()
+	return false
 }

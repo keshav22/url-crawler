@@ -17,9 +17,10 @@ type crawlPayload struct {
 }
 
 type crawlData struct {
-	ID   int          `json:"id"`
-	Data ScrapeResult `json:"data"`
-	Url  string       `json:"url"`
+	ID     int          `json:"id"`
+	Data   ScrapeResult `json:"data"`
+	Url    string       `json:"url"`
+	Status string       `json:"status"`
 }
 
 type crawlDataResponse struct {
@@ -59,7 +60,7 @@ func startCrawling(c *gin.Context) {
 	}
 
 	go func() {
-		crawData := crawl(payload.Url)
+		crawData := crawl(payload.Url, insertedId)
 
 		jsonBytes, err := json.Marshal(crawData.Data)
 		if err != nil {
@@ -121,6 +122,17 @@ func getCurrentCrawlData(c *gin.Context) {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
+
+		if dataBytes == nil || len(dataBytes) == 0 {
+			if checkCrawIdRunning(int64(d.ID)) {
+				d.Status = "running"
+			} else {
+				d.Status = "stopped"
+			}
+		} else {
+			d.Status = "done"
+		}
+
 		json.Unmarshal(dataBytes, &d.Data)
 		jsonCrawlData = append(jsonCrawlData, d)
 	}
@@ -138,11 +150,69 @@ func getCurrentCrawlData(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+func stopCrawl(c *gin.Context) {
+	var id int64
+
+	if err := c.ShouldBind(&id); err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	if !checkCrawIdRunning(id) {
+		c.JSON(http.StatusConflict, gin.H{
+			"message": "Job is already stopped/finished",
+		})
+		return
+	}
+
+	cleanUpCrawlId(id)
+
+	c.Status(http.StatusOK)
+}
+
+func reStartCrawling(c *gin.Context) {
+	var id int64
+
+	if err := c.ShouldBind(&id); err != nil {
+		c.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+
+	if checkCrawIdRunning(id) {
+		c.JSON(http.StatusConflict, gin.H{
+			"message": "Job is already running",
+		})
+		return
+	}
+
+	var url string
+	DB.QueryRow("SELECT url FROM crawl_data Where id=" + strconv.FormatInt(id, 10)).Scan(&url)
+
+	go func() {
+		crawData := crawl(url, id)
+
+		jsonBytes, err := json.Marshal(crawData.Data)
+		if err != nil {
+			log.Fatal("JSON marshal failed:", err)
+		}
+
+		_, err = DB.Exec(
+			"Update crawl_data SET data = ? where id = ?",
+			string(jsonBytes),
+			id,
+		)
+
+		if err != nil {
+			log.Fatal("Database update failed")
+		}
+	}()
+
+	c.Status(http.StatusOK)
+}
+
 // Todo
 // 1. Move DB operations to a different file
-// 2. Add support for deleting a crawl, abort it
-// 3. Add support for FE filter and pass those filters in BE and accordingly send data from crawl-data api only 10 as per page
-// 4. Add status response in crawl-data - queued -> running -> done/error
+// 2. Add support for FE filter and pass those filters in BE and accordingly send data from crawl-data api only 10 as per page
 
 func main() {
 	CreateDatabase()
@@ -158,7 +228,8 @@ func main() {
 	}))
 
 	router.POST("/url/crawl", startCrawling)
-	// router.POST("/url/crawl", startCrawling)
+	router.POST("/url/crawl/reStart", reStartCrawling)
+	router.POST("/url/crawl/stop", stopCrawl)
 	router.GET("/url/crawl-data", getCurrentCrawlData)
 
 	router.Run("localhost:8080")
