@@ -80,3 +80,15 @@
 .refresh-table { 
     padding-top: 7px;
 }
+
+.crawl-table-head-btn {
+    border: 0;
+    padding: 0;
+    background-color: transparent;
+    cursor: pointer;
+}
+
+.th-title {
+    font-size: 16px;
+    font-family: "RobotoRegular";
+}

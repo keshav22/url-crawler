@@ -6,7 +6,8 @@ type CrawlTableProps = {
   crawlUrlData: crawlData[];
   maxPageCount: number;
   onPageChange: (page: number) => void;
-  reFetchCrawlDatas: (page: number) => void;
+  reFetchCrawlDatas: () => void;
+  reFetchWithSortParams: (sortCol: string, sort: string) => void;
 };
 
 function CrawlTable({
@@ -14,9 +15,12 @@ function CrawlTable({
   maxPageCount,
   onPageChange,
   reFetchCrawlDatas,
+  reFetchWithSortParams,
 }: CrawlTableProps) {
   const [showResult, setShowResults] = useState<boolean>(false);
   const [currentPagenumber, setCurrentPagenumber] = useState<number>(1);
+  const [sortColoumn, setSortColoumn] = useState<string>("id");
+  const [sortColoumnOrder, setSortColoumnOrder] = useState<string>("ASC");
 
   const handleReAnalysis = (id: number) => {
     fetch("http://localhost:8080/url/crawl/reStart", {
@@ -60,6 +64,18 @@ function CrawlTable({
       });
   };
 
+  const handleThClick = (colName: string) => {
+    let order: string = sortColoumnOrder;
+    if (colName == sortColoumn) {
+      order = sortColoumnOrder == "ASC" ? "DESC" : "ASC"
+    }
+
+    reFetchWithSortParams(colName, order);
+
+    setSortColoumn(colName);
+    setSortColoumnOrder(order);
+  };
+
   return (
     <div className="crawl-table-container">
       <div className="crawl-table-header">
@@ -68,7 +84,7 @@ function CrawlTable({
           <button
             className="action-btn refresh-table"
             onClick={() => {
-              reFetchCrawlDatas(currentPagenumber);
+              reFetchCrawlDatas();
             }}
           >
             {" "}
@@ -113,16 +129,89 @@ function CrawlTable({
         <table className="crawl-table">
           <thead className="crawl-table-head">
             <tr>
-              <th>ID</th>
-              <th>url</th>
-              <th>Title</th>
-              <th>Html version</th>
-              <th>Internal links</th>
-              <th>External links</th>
-              <th>Inaccessible links</th>
-              <th>Login form found</th>
-              <th>Heading counts</th>
-              <th></th>
+              <th>
+                <button
+                  className="crawl-table-head-btn"
+                  onClick={() => handleThClick("id")}
+                >
+                  <strong className="th-title">ID</strong>{" "}
+                  {sortColoumn == "id" ? (
+                    sortColoumnOrder == "DESC" ? (
+                      <span>&#8593;</span>
+                    ) : (
+                      <span>&#8595;</span>
+                    )
+                  ) : (
+                    <></>
+                  )}
+                </button>
+              </th>
+              <th>
+                <button
+                  className="crawl-table-head-btn"
+                  onClick={() => handleThClick("url")}
+                >
+                  <strong className="th-title">url</strong>{" "}
+                  {sortColoumn == "url" ? (
+                    sortColoumnOrder == "DESC" ? (
+                      <span>&#8593;</span>
+                    ) : (
+                      <span>&#8595;</span>
+                    )
+                  ) : (
+                    <></>
+                  )}
+                </button>
+              </th>
+              <th>
+                <button
+                  className="crawl-table-head-btn"
+                  onClick={() => handleThClick("page_title")}
+                >
+                  <strong className="th-title">Title</strong>{" "}
+                  {sortColoumn == "page_title" ? (
+                    sortColoumnOrder == "DESC" ? (
+                      <span>&#8593;</span>
+                    ) : (
+                      <span>&#8595;</span>
+                    )
+                  ) : (
+                    <></>
+                  )}
+                </button>
+              </th>
+              <th>
+                <button
+                  className="crawl-table-head-btn"
+                  onClick={() => handleThClick("html_version")}
+                >
+                  <strong className="th-title">Html version</strong>{" "}
+                  {sortColoumn == "html_version" ? (
+                    sortColoumnOrder == "DESC" ? (
+                      <span>&#8593;</span>
+                    ) : (
+                      <span>&#8595;</span>
+                    )
+                  ) : (
+                    <></>
+                  )}
+                </button>
+              </th>
+              <th>
+                Internal links
+              </th>
+              <th>
+                External links
+              </th>
+              <th>
+                Inaccessible links
+              </th>
+              <th>
+                Login form found
+              </th>
+              <th>
+                Heading counts
+              </th>
             </tr>
           </thead>
 
@@ -185,10 +274,42 @@ function CrawlTable({
         <table className="crawl-table">
           <thead className="crawl-table-head">
             <tr>
-              <th>ID</th>
-              <th>Url</th>
+              <th>
+                <button
+                  className="crawl-table-head-btn"
+                  onClick={() => handleThClick("id")}
+                >
+                  <strong className="th-title">ID</strong>{" "}
+                  {sortColoumn == "id" ? (
+                    sortColoumnOrder == "DESC" ? (
+                      <span>&#8593;</span>
+                    ) : (
+                      <span>&#8595;</span>
+                    )
+                  ) : (
+                    <></>
+                  )}
+                </button>
+              </th>
+              <th>
+                <button
+                  className="crawl-table-head-btn"
+                  onClick={() => handleThClick("url")}
+                >
+                  <strong className="th-title">url</strong>{" "}
+                  {sortColoumn == "url" ? (
+                    sortColoumnOrder == "DESC" ? (
+                      <span>&#8593;</span>
+                    ) : (
+                      <span>&#8595;</span>
+                    )
+                  ) : (
+                    <></>
+                  )}
+                </button>
+              </th>
               <th>Status</th>
-              <th style={{textAlign: "center"}}>Action</th>
+              <th style={{ textAlign: "center" }}>Action</th>
             </tr>
           </thead>
 

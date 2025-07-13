@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 import "./App.css";
 import { crawlData, crawlDataResponse } from "./utils/types";
@@ -30,8 +30,17 @@ function App() {
   const [maxPageCount, setMaxPageCount] = useState<number>(1);
   const [currentPage, setCurrentPage] = useState<number>(1);
 
-  async function fetchCrawledData(page: number) {
-    fetch(`http://localhost:8080/url/crawl-data?page=${page}`)
+  const currentSortCol = useRef("");
+  const currentSortOrder = useRef("");
+
+  async function fetchCrawledData(
+    page: number,
+    srtColName: string = "",
+    order: string = ""
+  ) {
+    fetch(
+      `http://localhost:8080/url/crawl-data?page=${page}&order=${order}&srtColName=${srtColName}`
+    )
       .then((resp: Response) => resp.json())
       .then((data: crawlDataResponse) => {
         setMaxPageCount(data.pageCount);
@@ -61,24 +70,30 @@ function App() {
         Accept: "application/json",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ url: url }),
+      body: JSON.stringify({ url: url.trim() }),
     })
       .then((response: Response) => {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         setUrl("");
-        fetchCrawledData(currentPage);
+        fetchCrawledData(currentPage, currentSortCol.current, currentSortOrder.current);
       })
       .catch((err) => {
         console.error("Fetch error:", err);
       });
   };
 
+  const fetchCrawledDataWithSortParams = (sortCol: string, sort: string) => {
+    currentSortCol.current = sortCol;
+    currentSortOrder.current = sort;
+    fetchCrawledData(currentPage, sortCol, sort);
+  };
+
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    fetchCrawledData(page);
-  }
+    fetchCrawledData(page, currentSortCol.current, currentSortOrder.current);
+  };
 
   useEffect(() => {
     fetchCrawledData(currentPage);
@@ -96,10 +111,11 @@ function App() {
               id="url-input"
               className="url-input"
               type="text"
+              value={url}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setUrl(e.target.value)
               }
-              placeholder="https://www.github.com"
+              placeholder="https://www.github.com/keshav22"
             />
             {errorMessageUrlInput ? (
               <div className="err-msg-url">{errorMessageUrlInput}</div>
@@ -116,7 +132,8 @@ function App() {
           crawlUrlData={crawlUrlData}
           maxPageCount={maxPageCount}
           onPageChange={handlePageChange}
-          reFetchCrawlDatas={fetchCrawledData}
+          reFetchCrawlDatas={() => fetchCrawledData(currentPage)}
+          reFetchWithSortParams={fetchCrawledDataWithSortParams}
         />
       </div>
     </div>
