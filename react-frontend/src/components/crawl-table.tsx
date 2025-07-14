@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { crawlData } from "../utils/types";
 import "./crawl-table.css";
+import CrawlTableTh from "./crawl-table-th";
 
 type CrawlTableProps = {
   crawlUrlData: crawlData[];
@@ -8,6 +9,7 @@ type CrawlTableProps = {
   onPageChange: (page: number) => void;
   reFetchCrawlDatas: () => void;
   reFetchWithSortParams: (sortCol: string, sort: string) => void;
+  reFetchWithFilteredValue: (val: string) => void;
 };
 
 function CrawlTable({
@@ -16,40 +18,71 @@ function CrawlTable({
   onPageChange,
   reFetchCrawlDatas,
   reFetchWithSortParams,
+  reFetchWithFilteredValue,
 }: CrawlTableProps) {
   const [showResult, setShowResults] = useState<boolean>(false);
   const [currentPagenumber, setCurrentPagenumber] = useState<number>(1);
-  const [sortColoumn, setSortColoumn] = useState<string>("id");
+  const [selectedColoumn, setSelectedColoumn] = useState<string>("id");
   const [sortColoumnOrder, setSortColoumnOrder] = useState<string>("ASC");
 
-  const handleReAnalysis = (id: number) => {
-    fetch("http://localhost:8080/url/crawl/reStart", {
-      method: "post",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      body: id.toString(),
-    })
-      .then((response: Response) => {
-        if (!response.ok) {
-          if (response.status == 409) {
-            alert("Restart failed as similar crawl is running already");
-          } else throw new Error(`HTTP error! status: ${response.status}`);
-        }
-      })
-      .catch((err) => {
-        console.error("Fetch error:", err);
-      });
+  const [bulkCheckbox, setBulkCheckbox] = useState<boolean>(false);
+
+  const [checkedMap, setCheckedMap] = useState<Record<number, boolean>>({});
+
+  const timeOutId = useRef<number | null>(null);
+
+  const handleReAnalysis = async (
+    id: number,
+    fetchAfterDone: boolean = true
+  ) => {
+    const response: Response = await fetch(
+      `${process.env.REACT_APP_BE_URL}/url/crawl/reStart`,
+      {
+        method: "post",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: id.toString(),
+      }
+    );
+    if (!response.ok) {
+      if (response.status == 409) {
+        alert("Restart failed as similar crawl is running already");
+      } else throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    if (fetchAfterDone) reFetchCrawlDatas();
+  };
+
+  const handleDeleteAnalysis = async (
+    id: number,
+    fetchAfterDone: boolean = true
+  ) => {
+    const response: Response = await fetch(
+      `${process.env.REACT_APP_BE_URL}/url/crawl/delete?crawId=${id}`,
+      {
+        method: "delete",
+        credentials: "include",
+      }
+    );
+    if (!response.ok) {
+      if (response.status == 409) {
+        console.log("Delete failed");
+      } else throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    if (fetchAfterDone) reFetchCrawlDatas();
   };
 
   const handleStopAnalysis = (id: number) => {
-    fetch("http://localhost:8080/url/crawl/stop", {
+    fetch(`${process.env.REACT_APP_BE_URL}/url/crawl/stop`, {
       method: "post",
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
       },
+      credentials: "include",
       body: id.toString(),
     })
       .then((response: Response) => {
@@ -58,6 +91,7 @@ function CrawlTable({
             alert("Job is stopped/finished already");
           } else throw new Error(`HTTP error! status: ${response.status}`);
         }
+        reFetchCrawlDatas();
       })
       .catch((err) => {
         console.error("Fetch error:", err);
@@ -66,21 +100,113 @@ function CrawlTable({
 
   const handleThClick = (colName: string) => {
     let order: string = sortColoumnOrder;
-    if (colName == sortColoumn) {
-      order = sortColoumnOrder == "ASC" ? "DESC" : "ASC"
+    if (colName == selectedColoumn) {
+      order = sortColoumnOrder == "ASC" ? "DESC" : "ASC";
     }
 
     reFetchWithSortParams(colName, order);
 
-    setSortColoumn(colName);
+    setSelectedColoumn(colName);
     setSortColoumnOrder(order);
   };
 
+  const handleCheckboxClick = (id: number) => {
+    setCheckedMap({
+      ...checkedMap,
+      [id]: !checkedMap[id],
+    });
+  };
+
+  const handleBulkCheckboxClick = (checked: boolean) => {
+    setBulkCheckbox(true);
+    setCheckedMap(
+      crawlUrlData.reduce((acc: Record<number, boolean>, crawl: crawlData) => {
+        acc[crawl.id] = checked;
+        return acc;
+      }, {})
+    );
+  };
+
+  const handleBulkActionDelete = () => {
+    if (checkedMap && Object.keys(checkedMap).length == 0) {
+      alert("Select some rows first");
+      return;
+    }
+
+    const deleteIds = Object.keys(checkedMap).filter(
+      (x: string) => checkedMap[parseInt(x)]
+    );
+
+    const bulkCrawlPromiseArray: Array<Promise<void>> = [];
+
+    deleteIds.forEach((id) => {
+      const p = handleDeleteAnalysis(parseInt(id), false);
+      bulkCrawlPromiseArray.push(p);
+    });
+
+    Promise.all(bulkCrawlPromiseArray).then(() => {
+      reFetchCrawlDatas();
+      setCheckedMap({});
+      setBulkCheckbox(false);
+    });
+  };
+
+  const handleBulkActionCrawl = () => {
+    if (checkedMap && Object.keys(checkedMap).length == 0) {
+      alert("Select some rows first");
+      return;
+    }
+
+    const crawlIds = Object.keys(checkedMap).filter(
+      (x: string) => checkedMap[parseInt(x)]
+    );
+    const bulkCrawlPromiseArray: Array<Promise<void>> = [];
+
+    crawlIds.forEach((id) => {
+      const p = handleReAnalysis(parseInt(id), false);
+      bulkCrawlPromiseArray.push(p);
+    });
+
+    Promise.all(bulkCrawlPromiseArray).then(() => {
+      reFetchCrawlDatas();
+      setCheckedMap({});
+      setBulkCheckbox(false);
+    });
+  };
+
+  const handlePollingRate = (val: string) => {
+    if(timeOutId)
+        clearTimeout(timeOutId.current!);
+
+    if(val === "0")
+        return;
+
+    const timesIn60secs = parseInt(val);
+    const timeoutMiliSecs = 60000 / timesIn60secs; // 1000 * 60
+
+    timeOutId.current = timeoutCall(timeoutMiliSecs);
+  };
+
+  const timeoutCall = useCallback((timeoutMiliSecs: number) => {
+    const id = setTimeout(() => {
+      reFetchCrawlDatas();
+      timeOutId.current = timeoutCall(timeoutMiliSecs);
+    }, timeoutMiliSecs);
+    return id as unknown as number;
+  }, []);
+
+  useEffect(() => {
+    setCheckedMap({});
+    setBulkCheckbox(false);
+  }, [currentPagenumber, showResult]);
+
   return (
     <div className="crawl-table-container">
-      <div className="crawl-table-header">
+      <header className="crawl-table-header">
         <div className="crawl-table-h-desc">
-          <h3>{showResult ? "Data View" : "URL Management"}</h3>
+          <h3 style={{ margin: 0 }}>
+            {showResult ? "Data View" : "URL Management"}
+          </h3>
           <button
             className="action-btn refresh-table"
             onClick={() => {
@@ -90,6 +216,34 @@ function CrawlTable({
             {" "}
             <img src="/refresh_arrows.svg" width={20} height={20} />
           </button>
+          <div className="polling">
+            {"Polling "}
+            <select
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                handlePollingRate(e.target.value)
+              }
+            >
+              <option value={0} key="manual">
+                0
+              </option>
+              <option value={1} key="1">
+                1
+              </option>
+              <option value={2} key="2">
+                3
+              </option>
+              <option value={5} key="5">
+                5
+              </option>
+              <option value={10} key="10">
+                10
+              </option>
+              <option value={20} key="20">
+                20
+              </option>
+            </select>{" "}
+            {" /1 min"}
+          </div>
         </div>
         <div className="table-actions">
           <div>
@@ -119,99 +273,72 @@ function CrawlTable({
           </div>
           <button
             className="table-header-btn"
-            onClick={() => setShowResults(!showResult)}
+            onClick={() => {
+              setShowResults(!showResult);
+            }}
           >
-            Chage view
+            Change view
           </button>
         </div>
-      </div>
+      </header>
+      {showResult ? (
+        <></>
+      ) : (
+        <div className="bulk-action-container">
+          <button className="bulk-action-btn" onClick={handleBulkActionDelete}>
+            Delete
+          </button>
+          <button className="bulk-action-btn" onClick={handleBulkActionCrawl}>
+            Crawl
+          </button>
+          {": "} <strong>Bulk actions</strong>
+        </div>
+      )}
       {showResult ? (
         <table className="crawl-table">
           <thead className="crawl-table-head">
             <tr>
               <th>
-                <button
-                  className="crawl-table-head-btn"
-                  onClick={() => handleThClick("id")}
-                >
-                  <strong className="th-title">ID</strong>{" "}
-                  {sortColoumn == "id" ? (
-                    sortColoumnOrder == "DESC" ? (
-                      <span>&#8593;</span>
-                    ) : (
-                      <span>&#8595;</span>
-                    )
-                  ) : (
-                    <></>
-                  )}
-                </button>
+                <CrawlTableTh
+                  handleSortClick={handleThClick}
+                  reFetchWithFilteredValue={reFetchWithFilteredValue}
+                  colName="id"
+                  selectedCol={selectedColoumn}
+                  sortColoumnOrder={sortColoumnOrder}
+                />
               </th>
               <th>
-                <button
-                  className="crawl-table-head-btn"
-                  onClick={() => handleThClick("url")}
-                >
-                  <strong className="th-title">url</strong>{" "}
-                  {sortColoumn == "url" ? (
-                    sortColoumnOrder == "DESC" ? (
-                      <span>&#8593;</span>
-                    ) : (
-                      <span>&#8595;</span>
-                    )
-                  ) : (
-                    <></>
-                  )}
-                </button>
+                <CrawlTableTh
+                  handleSortClick={handleThClick}
+                  reFetchWithFilteredValue={reFetchWithFilteredValue}
+                  colName="url"
+                  selectedCol={selectedColoumn}
+                  sortColoumnOrder={sortColoumnOrder}
+                />
               </th>
               <th>
-                <button
-                  className="crawl-table-head-btn"
-                  onClick={() => handleThClick("page_title")}
-                >
-                  <strong className="th-title">Title</strong>{" "}
-                  {sortColoumn == "page_title" ? (
-                    sortColoumnOrder == "DESC" ? (
-                      <span>&#8593;</span>
-                    ) : (
-                      <span>&#8595;</span>
-                    )
-                  ) : (
-                    <></>
-                  )}
-                </button>
+                <CrawlTableTh
+                  handleSortClick={handleThClick}
+                  reFetchWithFilteredValue={reFetchWithFilteredValue}
+                  colName="page_title"
+                  selectedCol={selectedColoumn}
+                  sortColoumnOrder={sortColoumnOrder}
+                />
               </th>
               <th>
-                <button
-                  className="crawl-table-head-btn"
-                  onClick={() => handleThClick("html_version")}
-                >
-                  <strong className="th-title">Html version</strong>{" "}
-                  {sortColoumn == "html_version" ? (
-                    sortColoumnOrder == "DESC" ? (
-                      <span>&#8593;</span>
-                    ) : (
-                      <span>&#8595;</span>
-                    )
-                  ) : (
-                    <></>
-                  )}
-                </button>
+                <CrawlTableTh
+                  handleSortClick={handleThClick}
+                  reFetchWithFilteredValue={reFetchWithFilteredValue}
+                  colName="html_version"
+                  selectedCol={selectedColoumn}
+                  sortColoumnOrder={sortColoumnOrder}
+                />
               </th>
-              <th>
-                Internal links
-              </th>
-              <th>
-                External links
-              </th>
-              <th>
-                Inaccessible links
-              </th>
-              <th>
-                Login form found
-              </th>
-              <th>
-                Heading counts
-              </th>
+              <th>Internal links</th>
+              <th>External links</th>
+              <th>Inaccessible links</th>
+              <th>Login form found</th>
+              <th>Heading counts</th>
             </tr>
           </thead>
 
@@ -275,38 +402,31 @@ function CrawlTable({
           <thead className="crawl-table-head">
             <tr>
               <th>
-                <button
-                  className="crawl-table-head-btn"
-                  onClick={() => handleThClick("id")}
-                >
-                  <strong className="th-title">ID</strong>{" "}
-                  {sortColoumn == "id" ? (
-                    sortColoumnOrder == "DESC" ? (
-                      <span>&#8593;</span>
-                    ) : (
-                      <span>&#8595;</span>
-                    )
-                  ) : (
-                    <></>
-                  )}
-                </button>
+                <div style={{ display: "flex", gap: "4px" }}>
+                  <input
+                    checked={bulkCheckbox}
+                    type="checkbox"
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      handleBulkCheckboxClick(e.target.checked)
+                    }
+                  />
+                  <CrawlTableTh
+                    handleSortClick={handleThClick}
+                    reFetchWithFilteredValue={reFetchWithFilteredValue}
+                    colName="id"
+                    selectedCol={selectedColoumn}
+                    sortColoumnOrder={sortColoumnOrder}
+                  />
+                </div>
               </th>
               <th>
-                <button
-                  className="crawl-table-head-btn"
-                  onClick={() => handleThClick("url")}
-                >
-                  <strong className="th-title">url</strong>{" "}
-                  {sortColoumn == "url" ? (
-                    sortColoumnOrder == "DESC" ? (
-                      <span>&#8593;</span>
-                    ) : (
-                      <span>&#8595;</span>
-                    )
-                  ) : (
-                    <></>
-                  )}
-                </button>
+                <CrawlTableTh
+                  handleSortClick={handleThClick}
+                  reFetchWithFilteredValue={reFetchWithFilteredValue}
+                  colName="url"
+                  selectedCol={selectedColoumn}
+                  sortColoumnOrder={sortColoumnOrder}
+                />
               </th>
               <th>Status</th>
               <th style={{ textAlign: "center" }}>Action</th>
@@ -316,15 +436,28 @@ function CrawlTable({
           <tbody>
             {crawlUrlData.map((crawl: crawlData, index: number) => (
               <tr key={index}>
-                <td>{crawl.id}</td>
+                <td>
+                  <div style={{ display: "flex", gap: "4px" }}>
+                    <input
+                      id={crawl.id.toString()}
+                      type="checkbox"
+                      onClick={() => handleCheckboxClick(crawl.id)}
+                      checked={
+                        checkedMap[crawl.id] ? checkedMap[crawl.id] : false
+                      }
+                    />
+                    <div>{crawl.id}</div>
+                  </div>
+                </td>
                 <td>{crawl.url}</td>
                 <td>{crawl.status}</td>
                 <td>
                   <div className="action-btn-container">
                     <button
                       className="action-btn"
-                      onClick={() => {
+                      onClick={async () => {
                         handleReAnalysis(crawl.id);
+                        reFetchCrawlDatas();
                       }}
                     >
                       <img src="/refresh_arrows.svg" width={20} height={20} />
@@ -337,7 +470,12 @@ function CrawlTable({
                     >
                       <img src="/stop_icon.svg" width={20} height={20} />
                     </button>
-                    <button className="action-btn">
+                    <button
+                      onClick={() => {
+                        handleDeleteAnalysis(crawl.id);
+                      }}
+                      className="action-btn"
+                    >
                       <img src="/delete_trash.svg" width={20} height={20} />
                     </button>
                   </div>

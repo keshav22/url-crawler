@@ -1,6 +1,9 @@
 .crawl-table-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     text-align: left;
-    margin-top: 10px;
+    margin-top: 20px;
     overflow-x: auto;
 }
 
@@ -8,6 +11,7 @@
     border-collapse: separate; /* default, enables spacing */
     border-spacing: 10px 5px;
     width: 100%;
+    /* min-height: 90vh; */
 }
 
 .crawl-table-header {
@@ -22,7 +26,8 @@
     appearance: none;
     border: 0;
     color: rgb(0, 105, 40);
-    padding: 10px
+    padding: 10px;
+    cursor: pointer;
 }
 
 .tr-url-data {
@@ -91,4 +96,68 @@
 .th-title {
     font-size: 16px;
     font-family: "RobotoRegular";
+}
+
+.filter-triangle,
+.filter-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1em;
+  text-align: center;
+}
+
+.filter-bar {
+  top: 0.1em;
+}
+
+.dropdown-wrapper {
+  display: flex;
+}
+
+.dropdown {
+  position: absolute;
+  margin-left: 20px;
+  background-color: white;
+  min-width: 140px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  z-index: 1000;
+  max-width: 200px;
+  overflow: auto;
+  max-height: 400px;
+}
+
+.dropdown-item {
+  width: 100%;
+  padding: 8px 12px;
+  background: white;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dropdown-item:hover {
+  background-color: #f0f0f0;
+}
+
+.bulk-action-container {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.bulk-action-btn {
+    background-color: #D6E6F2;
+    border-radius: 4px;
+    appearance: none;
+    cursor: pointer;
+    border: 0;
+    color: black;
+    padding: 10px
+}
+
+.polling {
+    padding-top: 3px;
 }

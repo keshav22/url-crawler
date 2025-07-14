@@ -48,6 +48,7 @@
   border-radius: 4px;
   border: 0;
   height: 33px;
+  cursor: pointer;
 }
 
 .err-msg-url {
@@ -89,4 +90,9 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+.login-section {
+  padding-top: 30px;
+  padding-bottom: 10px;
 }

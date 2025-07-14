@@ -3,24 +3,21 @@ import React, { useEffect, useRef, useState } from "react";
 import "./App.css";
 import { crawlData, crawlDataResponse } from "./utils/types";
 import CrawlTable from "./components/crawl-table";
+import Login from "./components/login";
 
 var rxUrlValidation =
   /^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/[\w\-._~:/?#[\]@!$&'()*+,;=]*)?$/i;
 
+var token = sessionStorage.getItem("token");
 /* Todos ~ ideas that can be implemented but not necessary imp is the main task todos
 main
-1. Add filters
-2. Add table sort via coloumns
-3. Add fuzzy searchbox
-4. Bulk actions
-5. Detailed view - bars or donut chart of internal vs external links, list of broken links 
-6. Add delete of crawl data analysis
+3. Add fuzzy searchbox (not doing)
+5. Detailed view - bars or donut chart of internal vs external links, list of broken links (not doing)
 
 ideas
-1. Add throttling to action button and reload button such that the ction is only registered once if clicked multiple times. It can also be made disabled change the UI/UX accordingly.
+1. Add throttling to action button and reload button such that the ction is only registered once if clicked multiple times. It can also be made disabled change the UI/UX accordingly. (BE checks added hence not adding)
 2. Add auto refresh or make it action specific like only to refresh for like 5 times in 5 seconds internval when a new url or reStart of a crawl is initiated such that if data is found the polling stops
-3. Do something such that when a new url is added and its gonna fo to new page or your current view is in old page - directly go to the page. 
-4. Move the api call from "localhost:8080" to env variable and configure it environmentlly
+3. Do something such that when a new url is added and its gonna go to new page or your current view is in old page - directly go to the page. (not doing_) 
 */
 
 function App() {
@@ -29,19 +26,32 @@ function App() {
   const [errorMessageUrlInput, setSrrorMessageUrlInput] = useState<string>("");
   const [maxPageCount, setMaxPageCount] = useState<number>(1);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [showLoginSection, setShowLoginSection] = useState<boolean>(false);
 
-  const currentSortCol = useRef("");
-  const currentSortOrder = useRef("");
+  const currentCol = useRef("id");
+  const currentSortOrder = useRef("ASC");
+  const filterVal = useRef("");
 
   async function fetchCrawledData(
     page: number,
-    srtColName: string = "",
-    order: string = ""
+    colName: string = "",
+    order: string = "",
+    filterVal: string = ""
   ) {
     fetch(
-      `http://localhost:8080/url/crawl-data?page=${page}&order=${order}&srtColName=${srtColName}`
+      `${process.env.REACT_APP_BE_URL}/url/crawl-data?page=${page}&order=${order}&colName=${colName}&filterVal=${filterVal}`,
+      {
+        method: "GET",
+        credentials: "include",
+      }
     )
-      .then((resp: Response) => resp.json())
+      .then((resp: Response) => {
+        if (resp.status == 401) {
+          setShowLoginSection(true);
+          throw new Error(`HTTP error! status: ${resp.status}`);
+        }
+        return resp.json();
+      })
       .then((data: crawlDataResponse) => {
         setMaxPageCount(data.pageCount);
         setCrawlUrlData(data.data);
@@ -64,12 +74,13 @@ function App() {
 
     setSrrorMessageUrlInput("");
 
-    fetch("http://localhost:8080/url/crawl", {
+    fetch(`${process.env.REACT_APP_BE_URL}/url/crawl`, {
       method: "post",
       headers: {
         Accept: "application/json",
         "Content-Type": "application/json",
       },
+      credentials: "include",
       body: JSON.stringify({ url: url.trim() }),
     })
       .then((response: Response) => {
@@ -77,7 +88,11 @@ function App() {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         setUrl("");
-        fetchCrawledData(currentPage, currentSortCol.current, currentSortOrder.current);
+        fetchCrawledData(
+          currentPage,
+          currentCol.current,
+          currentSortOrder.current
+        );
       })
       .catch((err) => {
         console.error("Fetch error:", err);
@@ -85,22 +100,55 @@ function App() {
   };
 
   const fetchCrawledDataWithSortParams = (sortCol: string, sort: string) => {
-    currentSortCol.current = sortCol;
+    currentCol.current = sortCol;
     currentSortOrder.current = sort;
     fetchCrawledData(currentPage, sortCol, sort);
   };
 
+  const fetchFilteredValue = (val: string) => {
+    filterVal.current = val;
+    fetchCrawledData(
+      currentPage,
+      currentCol.current,
+      currentSortOrder.current,
+      val
+    );
+  };
+
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    fetchCrawledData(page, currentSortCol.current, currentSortOrder.current);
+    fetchCrawledData(
+      page,
+      currentCol.current,
+      currentSortOrder.current,
+      filterVal.current
+    );
   };
 
   useEffect(() => {
-    fetchCrawledData(currentPage);
+    if (!token) setShowLoginSection(true);
+    else fetchCrawledData(currentPage);
   }, []);
 
   return (
     <div className="App">
+      {showLoginSection ? (
+        <section className="login-section">
+          <Login
+            onLoginSuccess={() => {
+              fetchCrawledData(
+                currentPage,
+                currentCol.current,
+                currentSortOrder.current
+              );
+              setShowLoginSection(false);
+            }}
+          />
+        </section>
+      ) : (
+        <></>
+      )}
+
       <header>
         <h1 className="heading">URL Crawler</h1>
       </header>
@@ -132,8 +180,16 @@ function App() {
           crawlUrlData={crawlUrlData}
           maxPageCount={maxPageCount}
           onPageChange={handlePageChange}
-          reFetchCrawlDatas={() => fetchCrawledData(currentPage)}
+          reFetchCrawlDatas={() =>
+            fetchCrawledData(
+              currentPage,
+              currentCol.current,
+              currentSortOrder.current,
+              filterVal.current
+            )
+          }
           reFetchWithSortParams={fetchCrawledDataWithSortParams}
+          reFetchWithFilteredValue={fetchFilteredValue}
         />
       </div>
     </div>

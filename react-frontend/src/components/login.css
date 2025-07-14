@@ -1,0 +1,55 @@
+.login-form {
+  margin: auto;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.input {
+  padding: 0.5rem;
+  font-size: 1rem;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  font-family: "RobotoRegular";
+  border: 1px solid #D6E6F2;
+}
+
+.input:focus {
+  outline: none;
+  border: 1px solid #D6E6F2;
+}
+
+.btn {
+  padding: 0.6rem;
+  font-size: 1rem;
+  background-color: #769FCD;
+  border: none;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+  height: 38px;
+  font-family: "RobotoRegular";
+}
+
+.submit-btn {
+  background-color: #769FCD;
+  color: white;
+  border-radius: 4px;
+  border: 0;
+  height: 33px;
+}
+
+.btn:disabled {
+  background-color: #7baaf7;
+  cursor: not-allowed;
+}
+
+.error {
+  color: red;
+  font-size: 0.9rem;
+  padding-top: 5px;
+  margin: 0;
+  text-align: left;
+}
