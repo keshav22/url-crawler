@@ -30,6 +30,7 @@ func main() {
 		auth.GET("url/crawl-data", getCurrentCrawlData)
 		auth.GET("url/crawl/distinct", getColDistincValues)
 		auth.DELETE("url/crawl/delete", deleteCrawl)
+		auth.GET("/logout", logoutHandler)
 	}
 
 	router.Run("localhost:8080")

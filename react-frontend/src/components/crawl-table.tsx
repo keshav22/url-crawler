@@ -7,6 +7,7 @@ type CrawlTableProps = {
   crawlUrlData: crawlData[];
   maxPageCount: number;
   onPageChange: (page: number) => void;
+  isLoggedIn: boolean;
   reFetchCrawlDatas: () => void;
   reFetchWithSortParams: (sortCol: string, sort: string) => void;
   reFetchWithFilteredValue: (val: string) => void;
@@ -16,6 +17,7 @@ function CrawlTable({
   crawlUrlData,
   maxPageCount,
   onPageChange,
+  isLoggedIn,
   reFetchCrawlDatas,
   reFetchWithSortParams,
   reFetchWithFilteredValue,
@@ -194,6 +196,18 @@ function CrawlTable({
     }, timeoutMiliSecs);
     return id as unknown as number;
   }, []);
+
+  useEffect(() => {
+    if(!isLoggedIn) {
+        clearTimeout(timeOutId.current!);
+        setShowResults(false);
+        setCurrentPagenumber(1);
+        setSelectedColoumn("id");
+        setSortColoumnOrder("ASC");
+        setBulkCheckbox(false);
+        setCheckedMap({});
+    }
+  }, [isLoggedIn])
 
   useEffect(() => {
     setCheckedMap({});

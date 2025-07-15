@@ -33,12 +33,14 @@
   font-family: "RobotoRegular";
 }
 
-.submit-btn {
-  background-color: #769FCD;
-  color: white;
-  border-radius: 4px;
-  border: 0;
-  height: 33px;
+@media screen and (max-width:550px) {
+  .login-form {
+    padding: 0 60px;
+    flex-direction: column;
+  }
+  .input {
+    width: -webkit-fill-available
+  }
 }
 
 .btn:disabled {

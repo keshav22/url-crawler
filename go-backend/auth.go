@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -41,4 +42,21 @@ func loginHandler(c *gin.Context) {
 	http.SetCookie(c.Writer, cookie)
 
 	c.JSON(http.StatusOK, gin.H{"token": token})
+}
+
+func logoutHandler(c *gin.Context) {
+	cookie := &http.Cookie{
+		Name:     "token",
+		Value:    "", // empty value
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteNoneMode,
+		Expires:  time.Unix(0, 0), // January 1, 1970
+		MaxAge:   -1,              // also recommended for immediate removal
+	}
+
+	http.SetCookie(c.Writer, cookie)
+
+	c.JSON(http.StatusOK, gin.H{"message": "logged out"})
 }

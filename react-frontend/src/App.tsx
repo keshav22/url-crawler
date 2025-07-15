@@ -8,7 +8,6 @@ import Login from "./components/login";
 var rxUrlValidation =
   /^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/[\w\-._~:/?#[\]@!$&'()*+,;=]*)?$/i;
 
-var token = sessionStorage.getItem("token");
 /* Todos ~ ideas that can be implemented but not necessary imp is the main task todos
 main
 3. Add fuzzy searchbox (not doing)
@@ -125,9 +124,28 @@ function App() {
     );
   };
 
+  const handleLogout = () => {
+    fetch(`${process.env.REACT_APP_BE_URL}/logout`, {
+      method: "get",
+      credentials: "include",
+    })
+      .then((response: Response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        setShowLoginSection(true);
+        setCrawlUrlData([]);
+        setMaxPageCount(1);
+        setCurrentPage(1);
+        setUrl("");
+      })
+      .catch((err) => {
+        console.error("Fetch error:", err);
+      });
+  }
+
   useEffect(() => {
-    if (!token) setShowLoginSection(true);
-    else fetchCrawledData(currentPage);
+    fetchCrawledData(currentPage);
   }, []);
 
   return (
@@ -146,7 +164,9 @@ function App() {
           />
         </section>
       ) : (
-        <></>
+        <button className="logout-btn" onClick={handleLogout}>
+            Logout
+          </button>
       )}
 
       <header>
@@ -180,6 +200,7 @@ function App() {
           crawlUrlData={crawlUrlData}
           maxPageCount={maxPageCount}
           onPageChange={handlePageChange}
+          isLoggedIn={!showLoginSection}
           reFetchCrawlDatas={() =>
             fetchCrawledData(
               currentPage,

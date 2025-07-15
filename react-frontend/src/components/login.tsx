@@ -1,4 +1,4 @@
-import React, { useState, FormEvent } from "react";
+import React, { useState, FormEvent, useCallback } from "react";
 import "./login.css";
 
 interface LoginProps {
@@ -11,9 +11,9 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
 
-  const validateEmail = (email: string): boolean => {
+  const validateEmail = useCallback((email: string): boolean => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  };
+  }, []);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -33,14 +33,14 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     try {
       const res = await fetch(`${process.env.REACT_APP_BE_URL}/login`, {
         method: "POST",
-        credentials: 'include',
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-      const data: {token: string} = await res.json();
+      const data: { token: string } = await res.json();
 
       if (!res.ok) {
-        setError("Login failed");
+        setError("Wrong email or password");
         setLoading(false);
         return;
       }
@@ -55,19 +55,21 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
   return (
     <form className="login-form" onSubmit={handleSubmit}>
-        <div>
-            <input
-        type="email"
-        className="input"
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        required
-      />
-            {error && <p className="error">{error}</p>}
-        </div>
-      
+      <div>
+        <input
+          id="email"
+          type="email"
+          className="input"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+        {error && <p className="error">{error}</p>}
+      </div>
+
       <input
+        id="password"
         type="password"
         className="input"
         placeholder="Password"
@@ -76,7 +78,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         required
         minLength={6}
       />
-      
+
       <button className="btn" type="submit" disabled={loading}>
         {loading ? "Logging in..." : "Login"}
       </button>
