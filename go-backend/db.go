@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
 
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -11,10 +12,10 @@ import (
 var DB *sql.DB
 
 func CreateDatabase() {
-	serverName := "localhost:3306"
-	user := "keshav"
-	password := "Keshav@12"
-	dbName := "crawler"
+	serverName := os.Getenv("DB_SERVER_ADDRESS")
+	user := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	dbName := os.Getenv("DATABASE")
 
 	connectionString := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=utf8mb4&collation=utf8mb4_unicode_ci&parseTime=true&multiStatements=true", user, password, serverName, dbName)
 	var err error

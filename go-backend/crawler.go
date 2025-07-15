@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/gocolly/colly"
 )
@@ -129,7 +130,7 @@ func crawl(currenturl string, id int64) Response {
 	c.Request("GET", currenturl, nil, collyCtx, nil)
 
 	//The below line is just for testing will be removed completely later
-	//time.Sleep(10 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	checker.Wait()
 	c.Wait()

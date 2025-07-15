@@ -3,6 +3,18 @@ A simple full-stack URL crawler application built using **Go (Gin)** for the bac
 
 ## Notes
 - All config variables(DB, API_PREFIX, JWT_SECRET etc.)  are controlled via .env files so create one.
+```
+go-backend .env 
+JWT_SECRET=[ADD_YOUR_VALUE]
+FE_URL=[ADD_YOUR_VALUE]
+DB_SERVER_ADDRESS=[ADD_YOUR_VALUE]
+DB_USER=[ADD_YOUR_VALUE]
+DB_PASSWORD=[ADD_YOUR_VALUE]
+DATABASE=[ADD_YOUR_VALUE]
+
+react-frotend .env
+REACT_APP_BE_URL=[ADD_YOUR_VALUE]
+```
 - The app does **not** support registration; use the test accounts provided.
 - Ensure MySQL is running and accessible by the backend.
 - Backend and frontend must be run concurrently.
