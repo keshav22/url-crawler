@@ -61,6 +61,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           type="email"
           className="input"
           placeholder="Email"
+          data-testid="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -72,6 +73,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         id="password"
         type="password"
         className="input"
+        data-testid="password"
         placeholder="Password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
@@ -79,7 +81,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         minLength={6}
       />
 
-      <button className="btn" type="submit" disabled={loading}>
+      <button data-testid="login-btn" className="btn" type="submit" disabled={loading}>
         {loading ? "Logging in..." : "Login"}
       </button>
     </form>

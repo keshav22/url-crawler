@@ -179,6 +179,7 @@ function App() {
               id="url-input"
               className="url-input"
               type="text"
+              data-testid="url-input"
               value={url}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setUrl(e.target.value)
@@ -192,7 +193,7 @@ function App() {
             )}
           </div>
 
-          <button className="submit-btn" onClick={submit}>
+          <button data-testid="crawl-btn" className="submit-btn" onClick={submit}>
             Crawl
           </button>
         </div>

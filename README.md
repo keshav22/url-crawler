@@ -68,6 +68,10 @@ A simple full-stack URL crawler application built using **Go (Gin)** for the bac
 
    `npm start`
 
+4. To run tests:
+
+    `npm test`
+
 > The frontend will run on http://localhost:3000
 
 ## Project Structure

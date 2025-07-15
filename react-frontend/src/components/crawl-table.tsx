@@ -177,11 +177,9 @@ function CrawlTable({
   };
 
   const handlePollingRate = (val: string) => {
-    if(timeOutId)
-        clearTimeout(timeOutId.current!);
+    if (timeOutId) clearTimeout(timeOutId.current!);
 
-    if(val === "0")
-        return;
+    if (val === "0") return;
 
     const timesIn60secs = parseInt(val);
     const timeoutMiliSecs = 60000 / timesIn60secs; // 1000 * 60
@@ -198,16 +196,16 @@ function CrawlTable({
   }, []);
 
   useEffect(() => {
-    if(!isLoggedIn) {
-        clearTimeout(timeOutId.current!);
-        setShowResults(false);
-        setCurrentPagenumber(1);
-        setSelectedColoumn("id");
-        setSortColoumnOrder("ASC");
-        setBulkCheckbox(false);
-        setCheckedMap({});
+    if (!isLoggedIn) {
+      clearTimeout(timeOutId.current!);
+      setShowResults(false);
+      setCurrentPagenumber(1);
+      setSelectedColoumn("id");
+      setSortColoumnOrder("ASC");
+      setBulkCheckbox(false);
+      setCheckedMap({});
     }
-  }, [isLoggedIn])
+  }, [isLoggedIn]);
 
   useEffect(() => {
     setCheckedMap({});
@@ -455,7 +453,7 @@ function CrawlTable({
                     <input
                       id={crawl.id.toString()}
                       type="checkbox"
-                      onClick={() => handleCheckboxClick(crawl.id)}
+                      onChange={() => handleCheckboxClick(crawl.id)}
                       checked={
                         checkedMap[crawl.id] ? checkedMap[crawl.id] : false
                       }
